@@ -2,14 +2,15 @@
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using GrahamFormula.Models;
 using System.Reflection.Metadata;
 using System.Collections.Generic;
+using GrahamFormula.Models.Entities;
 using GrahamFormula.Models.Financials;
 
-namespace GrahamFormula.Services
-
+namespace GrahamFormula.AlphaVintage
 {
-    public class AlphaVantageService
+	public class AlphaVantageService
 	{
 		private readonly HttpClient _httpClient;
 		private readonly string _apiKey;
@@ -19,94 +20,124 @@ namespace GrahamFormula.Services
 			_httpClient = new HttpClient();
 			_httpClient.BaseAddress = new Uri("https://www.alphavantage.co/");
 			_apiKey = apiKey;
+
 		}
-
-		public string LastRequestedUrl { get; private set; } // Store the last requested URL
-
 
 
 		public async Task<Stock> GetStockDataAsync(string symbol)
 		{
 			Stock stock = new Stock();
-			string url;
-			// Relative URL should not include the base address, HttpClient will combine them
-			url = $"query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
+			stock.Symbol = symbol;
 
-			HttpResponseMessage response = null;
-			string content = "";
-
+			// Fetch Global Quote
 			try
 			{
-				response = await _httpClient.GetAsync(url);
-				content = await response.Content.ReadAsStringAsync();
-
-				// Check if the response status code indicates success
-				if (!response.IsSuccessStatusCode)
-				{
-					// Log the error and the content of the response
-					Console.WriteLine($"Error fetching stock data: {response.StatusCode}");
-					Console.WriteLine($"Response content: {content}");
-					return null; // Handle the error appropriately
-				}
+				stock.StockQuote = await GetGlobalQuoteAsync(symbol);
+				stock.Name = stock.StockQuote.Name; // Assign the stock Name
 			}
-			catch (HttpRequestException e)
+			catch (Exception)
 			{
-				// Log the exception details
-				Console.WriteLine($"HttpRequestException caught: {e.Message}");
-				return null; // Handle the exception appropriately
+				stock.StockQuote = null;
 			}
 
-			// If the response was successful, parse the JSON
-			var stockData1 = JsonConvert.DeserializeObject<Stock>(content);
-			stock.StockQuote = stockData1.StockQuote;
+			// Fetch Balance Sheet
+			try
+			{
+				stock.AnnualReports = await GetBalanceSheetAsync(symbol);
+			}
+			catch (Exception)
+			{
+				stock.AnnualReports = null;
+			}
 
-			url = $"query?function=BALANCE_SHEET&symbol={symbol}&apikey={_apiKey}";
+			// Fetch Stock Overview
+			try
+			{
+				stock.StockOverview = await GetStockOverviewAsync(symbol);
+			}
+			catch (Exception)
+			{
+				stock.StockOverview = null;
+			}
 
-			response = await _httpClient.GetAsync(url);
-			content = await response.Content.ReadAsStringAsync();
+			// Fetch EPS List
+			try
+			{
+				stock.EPSList = await GetEPSListAsync(symbol);
+			}
+			catch (Exception)
+			{
+				stock.EPSList = null;
+			}
 
-			var stockData2 = JsonConvert.DeserializeObject<Stock>(content);
-			stock.AnnualReports = stockData2.AnnualReports;
+
 			return stock;
 		}
 
 
 
+		// Get API response based on url
+		private async Task<string> GetApiResponseAsync(string url)
+		{
+			HttpResponseMessage response = await _httpClient.GetAsync(url);
+			if (!response.IsSuccessStatusCode)
+			{
+				throw new HttpRequestException($"Error fetching data: {response.StatusCode}");
+			}
+			return await response.Content.ReadAsStringAsync();
+		}
 
-		public async Task<List<EPS>> GetEPSListAsync(string symbol)
+		// Fetch Global Quote
+		private async Task<GlobalQuote> GetGlobalQuoteAsync(string symbol)
+		{
+			string url = $"query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
+			string content = await GetApiResponseAsync(url);
+			var stockData = JsonConvert.DeserializeObject<Stock>(content);
+			return stockData.StockQuote;
+		}
+		// Fetch Balance Sheet
+		private async Task<List<AnnualReports>> GetBalanceSheetAsync(string symbol)
+		{
+			string url = $"query?function=BALANCE_SHEET&symbol={symbol}&apikey={_apiKey}";
+			string content = await GetApiResponseAsync(url);
+			var stockData = JsonConvert.DeserializeObject<Stock>(content);
+			return stockData.AnnualReports;
+		}
+
+		// Fetch Stock Overview
+		private async Task<StockOverview> GetStockOverviewAsync(string symbol)
+		{
+			string url = $"query?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
+			string content = await GetApiResponseAsync(url);
+			var stockData = JsonConvert.DeserializeObject<Stock>(content);
+			return stockData.StockOverview;
+		}
+
+		// Fetch EPS History
+		private async Task<List<EPS>> GetEPSListAsync(string symbol)
 		{
 			List<EPS> EPSList = new List<EPS>();
-
-			var url = $"query?function=EARNINGS&symbol={symbol}&apikey={_apiKey}";
-			HttpResponseMessage response = null;
-			string content = "";
+			string url = $"query?function=EARNINGS&symbol={symbol}&apikey={_apiKey}";
 
 			try
 			{
-				response = await _httpClient.GetAsync(url);
-				content = await response.Content.ReadAsStringAsync();
+				string content = await GetApiResponseAsync(url);
+				dynamic data = JsonConvert.DeserializeObject(content);
 
-				if (!response.IsSuccessStatusCode)
+				foreach (var item in data.annualEarnings)
 				{
-					return null;
+					DateTime fiscalYear = DateTime.Parse((string)item.fiscalDateEnding);
+					decimal epsValue = decimal.Parse((string)item.reportedEPS);
+					EPSList.Add(new EPS { FiscalYear = fiscalYear, Value = epsValue });
 				}
 			}
 			catch (HttpRequestException e)
 			{
 				return null;
 			}
-			dynamic data = JsonConvert.DeserializeObject(content);
 
-			foreach (var item in data.annualEarnings)
-			{
-				DateTime fiscalYear = DateTime.Parse((string)item.fiscalDateEnding); // Parses the fiscalDateEnding string to DateTime
-				decimal epsValue = decimal.Parse((string)item.reportedEPS); // Parses the reportedEPS string to decimal
-
-				EPSList.Add(new EPS { FiscalYear = fiscalYear, Value = epsValue });
-			}
 			return EPSList;
 		}
-
 
 	}
 }
