@@ -119,8 +119,6 @@ namespace GrahamFormula.AlphaVintage
 			List<EPS> EPSList = new List<EPS>();
 			string url = $"query?function=EARNINGS&symbol={symbol}&apikey={_apiKey}";
 
-			try
-			{
 				string content = await GetApiResponseAsync(url);
 				dynamic data = JsonConvert.DeserializeObject(content);
 
@@ -130,11 +128,6 @@ namespace GrahamFormula.AlphaVintage
 					decimal epsValue = decimal.Parse((string)item.reportedEPS);
 					EPSList.Add(new EPS { FiscalYear = fiscalYear, Value = epsValue });
 				}
-			}
-			catch (HttpRequestException e)
-			{
-				return null;
-			}
 
 			return EPSList;
 		}
