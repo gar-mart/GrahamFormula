@@ -7,8 +7,6 @@ Features
 - Margin of Safety Assessment: Evaluates whether a stock's market price offers a sufficient margin of safety compared to its intrinsic value.
 - Dividend History Analysis: Reviews the consistency and growth of a company's dividend payouts over time.
 - Financial Health Checks: Analyzes balance sheet strength, debt levels, and liquidity ratios.
-
-Coming soon...
 - Stock Comparison: Compares multiple stocks based on key financial metrics.
 - Portfolio Diversification Analysis: Ensures a well-balanced and diversified investment portfolio.
 - etc.
@@ -38,8 +36,6 @@ Once you have Stocks initialized, you can use the functionality provided by Secu
 - Margin of Safety Calculation: Determine if the current market price of a security provides a significant margin of safety compared to its intrinsic value.
 - Financial Ratios and Metrics: Compute critical financial ratios such as P/E (Price-to-Earnings), P/B (Price-to-Book), debt-to-equity, and current ratios that Graham emphasized for selecting stocks.
 - Historical Earnings Growth: Calculate the historical growth rate of a company's earnings to evaluate its track record of profitability and growth.
-
-Coming soon...
 - Debt Analysis: Assess a company's debt levels to ensure that it is not overleveraged, maintaining a conservative debt-to-equity ratio.
 - Stock Categorization: Classify stocks as either defensive or enterprising based on their financial metrics, size, and earnings stability to suit different investment strategies.
 - Portfolio Diversification: Evaluate and recommend diversification strategies to reduce the risk of the investment portfolio.
